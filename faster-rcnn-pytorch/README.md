@@ -19,12 +19,12 @@ This project is a simple pytorch implementation of faster R-CNN. Recently, there
 
 First of all, clone the code
 ```
-git clone https://github.com/jwyang/faster-rcnn.pytorch.git
+git clone git@github.com:dongdonghy/Detection-PyTorch-Notebook.git
 ```
 
 Then, create a folder:
 ```
-cd faster-rcnn.pytorch && mkdir data
+cd Detection-PyTorch-Notebook/faster-rcnn.pytorch && mkdir data
 ```
 
 ### prerequisites
