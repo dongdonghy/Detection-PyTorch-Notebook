@@ -1,0 +1,19 @@
+colors: ['#F0080F','#0A00D7','#95090A','#700FD4','#00a0F0','#00050C', '#30b404','#F00F00','#008377','#E0203B',
+          '#F00500','#008000','#0000FF','#F0F0F0','#7C0C00','#E0F00F','#00B000','#000FF0','#ADD806', '#320032',
+         '#48000C', '#C00085','#F5000A', '#00E4B5','#0000E6','#0070D6','#D00003','#DD0000','#FF0000','#2E0057',]
+
+iouThreshold: 0.5
+
+gtFormat: 'xyrb'
+detFormat: 'xyrb'
+gtCoordinates: 'abs'
+detCoordinates: 'abs'
+
+showPlot: 'True'
+
+
+
+
+
+
+
