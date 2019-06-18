@@ -1,3 +1,5 @@
+from torch import nn
+
 class MobileNet(nn.Module):
     def __init__(self):
         super(MobileNet, self).__init__()

@@ -1,3 +1,5 @@
+from torch import nn
+
 class InvertedResidual(nn.Module):
 
     def __init__(self, inp, oup, stride, expand_ratio):
