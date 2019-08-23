@@ -1,47 +1,34 @@
-# A simple Pytorch Implementation of Faster R-CNN
+# 第四章 Faster RCNN
 
-## Introduction
+## 简介
 
-This project is a simple pytorch implementation of faster R-CNN. Recently, there are a number of good implementations:
+该代码主要参考了[longcw/faster_rcnn_pytorch](https://github.com/longcw/faster_rcnn_pytorch)的PyTorch复现工程。
 
-* [rbgirshick/py-faster-rcnn](https://github.com/rbgirshick/py-faster-rcnn), developed based on Pycaffe + Numpy
+## 准备工作
 
-* [longcw/faster_rcnn_pytorch](https://github.com/longcw/faster_rcnn_pytorch), developed based on Pytorch + Numpy
-
-* [endernewton/tf-faster-rcnn](https://github.com/endernewton/tf-faster-rcnn), developed based on TensorFlow + Numpy
-
-* [ruotianluo/pytorch-faster-rcnn](https://github.com/ruotianluo/pytorch-faster-rcnn), developed based on Pytorch + TensorFlow + Numpy
-
-* [jwyang/faster-rcnn.pytorch](https://github.com/jwyang/faster-rcnn.pytorch), developed based on Pytorch
-
-## Preparation
-
-
-First of all, clone the code
+首先clone本书代码到本地：
 ```
 git clone git@github.com:dongdonghy/Detection-PyTorch-Notebook.git
 ```
 
-Then, create a folder:
+然后切换到本代码，并创建data文件夹：
 ```
 cd Detection-PyTorch-Notebook/faster-rcnn.pytorch && mkdir data
 ```
 
-### prerequisites
+### 依赖
 
-* Python 2.7 or 3.6
-* Pytorch 0.4.0 (**now it does not support 0.4.1 or higher**)
-* CUDA 8.0 or higher
+* Python 2.7或者3.6
+* Pytorch 0.4.0
+* CUDA 8.0或者更高
 
-### Data Preparation
+### 数据准备
 
 * **PASCAL_VOC 07+12**: Please follow the instructions in [py-faster-rcnn](https://github.com/rbgirshick/py-faster-rcnn#beyond-the-demo-installation-for-training-and-testing-models) to prepare VOC datasets. Actually, you can refer to any others. After downloading the data, creat softlinks in the folder data/.
 
 * **COCO**: Please also follow the instructions in [py-faster-rcnn](https://github.com/rbgirshick/py-faster-rcnn#beyond-the-demo-installation-for-training-and-testing-models) to prepare the data.
 
-* **Visual Genome**: Please follow the instructions in [bottom-up-attention](https://github.com/peteanderson80/bottom-up-attention) to prepare Visual Genome dataset. You need to download the images and object annotation files first, and then perform proprecessing to obtain the vocabulary and cleansed annotations based on the scripts provided in this repository.
-
-### Pretrained Model
+### 预训练权重
 
 We used two pretrained models in our experiments, VGG and ResNet101. You can download these two models from:
 
@@ -55,7 +42,7 @@ Download them and put them into the data/pretrained_model/.
 
 **If you want to use pytorch pre-trained models, please remember to transpose images from BGR to RGB, and also use the same data transformer (minus mean and normalize) as used in pretrained model.**
 
-### Compilation
+### 编译
 
 As pointed out by [ruotianluo/pytorch-faster-rcnn](https://github.com/ruotianluo/pytorch-faster-rcnn), choose the right `-arch` in `make.sh` file, to compile the cuda code:
 
@@ -85,7 +72,7 @@ It will compile all the modules you need, including NMS, ROI_Pooing, ROI_Align a
 
 **As pointed out in this [issue](https://github.com/jwyang/faster-rcnn.pytorch/issues/16), if you encounter some error during the compilation, you might miss to export the CUDA paths to your environment.**
 
-## Train
+## 训练
 
 Before training, set the right directory to save and load the trained models. Change the arguments "save_dir" and "load_dir" in trainval_net.py and test_net.py to adapt to your environment.
 
@@ -118,7 +105,7 @@ python trainval_net.py --dataset pascal_voc --net vgg16 \
 
 Change dataset to "coco" or 'vg' if you want to train on COCO or Visual Genome.
 
-## Test
+## 测试
 
 If you want to evlauate the detection performance of a pre-trained vgg16 model on pascal_voc test set, simply run
 ```
@@ -128,7 +115,7 @@ python test_net.py --dataset pascal_voc --net vgg16 \
 ```
 Specify the specific model session, chechepoch and checkpoint, e.g., SESSION=1, EPOCH=6, CHECKPOINT=416.
 
-## Demo
+## 演示
 
 If you want to run detection on your own images with a pre-trained model, download the pretrained model listed in above tables or train your own models at first, then add images to folder $ROOT/images, and then run
 ```
