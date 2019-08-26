@@ -12,8 +12,7 @@ export CFLAGS="-std=c99"
 python3 setup.py build_ext --inplace
 rm -rf build
 
-CUDA_ARCH="-gencode arch=compute_30,code=sm_30 \
-           -gencode arch=compute_61,code=sm_61 "
+CUDA_ARCH="-gencode arch=compute_61,code=sm_61 "
 
 # compile NMS
 cd model/nms/src

@@ -44,9 +44,9 @@ class pascal_voc(imdb):
         self._image_set = image_set
         self._devkit_path = self._get_default_path() if devkit_path is None \
             else devkit_path
-        self._devkit_path="/home/aizz/Documents/common_data/datasets/VOC2012"
+        self._devkit_path="/root/Detection-PyTorch-Notebook/chapter4/faster-rcnn-pytorch/data/VOC2012"
         self._data_path = os.path.join(self._devkit_path, 'VOC' + self._year)
-        self._data_path = "/home/aizz/Documents/common_data/datasets/VOC2012"
+        self._data_path = "/root/Detection-PyTorch-Notebook/chapter4/faster-rcnn-pytorch/data/VOC2012"
         self._classes = ('__background__',  # always index 0
                          'aeroplane', 'bicycle', 'bird', 'boat',
                          'bottle', 'bus', 'car', 'cat', 'chair',

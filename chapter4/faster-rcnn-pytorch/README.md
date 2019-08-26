@@ -24,19 +24,19 @@ cd Detection-PyTorch-Notebook/faster-rcnn.pytorch && mkdir data
 
 ### 数据准备
 
-* **PASCAL_VOC 07+12**: Please follow the instructions in [py-faster-rcnn](https://github.com/rbgirshick/py-faster-rcnn#beyond-the-demo-installation-for-training-and-testing-models) to prepare VOC datasets. Actually, you can refer to any others. After downloading the data, creat softlinks in the folder data/.
+* **PASCAL_VOC 07+12**: 如果是VOC的数据集，按照[py-faster-rcnn](https://github.com/rbgirshick/py-faster-rcnn#beyond-the-demo-installation-for-training-and-testing-models)的方法准备VOC数据集，并创建软连接到data文件夹。
 
-* **COCO**: Please also follow the instructions in [py-faster-rcnn](https://github.com/rbgirshick/py-faster-rcnn#beyond-the-demo-installation-for-training-and-testing-models) to prepare the data.
+* **COCO**: 如果是COCO数据集，则按照[py-faster-rcnn](https://github.com/rbgirshick/py-faster-rcnn#beyond-the-demo-installation-for-training-and-testing-models)的方法准备COCO数据集，并创建软连接到data文件夹。
 
 ### 预训练权重
 
-We used two pretrained models in our experiments, VGG and ResNet101. You can download these two models from:
+作者提供了VGG与ResNet101两个不同的预训练权重:
 
 * VGG16: [Dropbox](https://www.dropbox.com/s/s3brpk0bdq60nyb/vgg16_caffe.pth?dl=0), [VT Server](https://filebox.ece.vt.edu/~jw2yang/faster-rcnn/pretrained-base-models/vgg16_caffe.pth)
 
 * ResNet101: [Dropbox](https://www.dropbox.com/s/iev3tkbz5wyyuz9/resnet101_caffe.pth?dl=0), [VT Server](https://filebox.ece.vt.edu/~jw2yang/faster-rcnn/pretrained-base-models/resnet101_caffe.pth)
 
-Download them and put them into the data/pretrained_model/.
+下载相应的预训练权重，并放到data/pretrained_model文件夹下。
 
 **NOTE**. We compare the pretrained models from Pytorch and Caffe, and surprisingly find Caffe pretrained models have slightly better performance than Pytorch pretrained. We would suggest to use Caffe pretrained models from the above link to reproduce our results.
 
