@@ -32,9 +32,6 @@ from model.utils.net_utils import weights_normal_init, save_net, load_net, \
 from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
 
-from tensorboardX import SummaryWriter
-writer = SummaryWriter('logs/vgg_voc')
-
 def parse_args():
   """
   Parse input arguments
@@ -64,13 +61,14 @@ def parse_args():
                       type=str)
   parser.add_argument('--nw', dest='num_workers',
                       help='number of worker to load data',
-                      default=0, type=int)
+                      default=1, type=int)
   parser.add_argument('--cuda', dest='cuda',
                       help='whether use CUDA',
-                      action='store_true')
+                      default='True', action='store_true')
   parser.add_argument('--ls', dest='large_scale',
                       help='whether use large imag scale',
                       action='store_true')                      
+  # 当使用多个GPU时，设置mGPUs为True
   parser.add_argument('--mGPUs', dest='mGPUs',
                       help='whether use multiple GPUs',
                       action='store_true')
@@ -81,7 +79,7 @@ def parse_args():
                       help='whether perform class_agnostic bbox regression',
                       action='store_true')
 
-# config optimization
+# 优化器超参数
   parser.add_argument('--o', dest='optimizer',
                       help='training optimizer',
                       default="sgd", type=str)
@@ -95,12 +93,11 @@ def parse_args():
                       help='learning rate decay ratio',
                       default=0.1, type=float)
 
-# set training session
   parser.add_argument('--s', dest='session',
                       help='training session',
                       default=1, type=int)
 
-# resume trained model
+# 加载已训练模型作为预训练模型
   parser.add_argument('--r', dest='resume',
                       help='resume checkpoint or not',
                       default=False, type=bool)
@@ -113,10 +110,10 @@ def parse_args():
   parser.add_argument('--checkpoint', dest='checkpoint',
                       help='checkpoint to load model',
                       default=0, type=int)
-# log and diaplay
+# log参数
   parser.add_argument('--use_tfb', dest='use_tfboard',
                       help='whether use tensorboard',
-                      action='store_true')
+                      default='True', action='store_true')
 
   args = parser.parse_args()
   return args
@@ -166,16 +163,6 @@ if __name__ == '__main__':
       args.imdb_name = "coco_2014_train+coco_2014_valminusminival"
       args.imdbval_name = "coco_2014_minival"
       args.set_cfgs = ['ANCHOR_SCALES', '[4, 8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '50']
-  elif args.dataset == "imagenet":
-      args.imdb_name = "imagenet_train"
-      args.imdbval_name = "imagenet_val"
-      args.set_cfgs = ['ANCHOR_SCALES', '[4, 8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '30']
-  elif args.dataset == "vg":
-      # train sizes: train, smalltrain, minitrain
-      # train scale: ['150-50-20', '150-50-50', '500-150-80', '750-250-150', '1750-700-450', '1600-400-20']
-      args.imdb_name = "vg_150-50-50_minitrain"
-      args.imdbval_name = "vg_150-50-50_minival"
-      args.set_cfgs = ['ANCHOR_SCALES', '[4, 8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '50']
 
   args.cfg_file = "cfgs/{}_ls.yml".format(args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
 
@@ -188,7 +175,7 @@ if __name__ == '__main__':
   pprint.pprint(cfg)
   np.random.seed(cfg.RNG_SEED)
 
-  # 当有GPU资源时，最好在训练时加上--cuda参数
+  # 当有GPU资源时，最好使用GPU进行模型训练
   if torch.cuda.is_available() and not args.cuda:
     print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
@@ -289,7 +276,7 @@ if __name__ == '__main__':
     logger = SummaryWriter("logs")
 
   for epoch in range(args.start_epoch, args.max_epochs + 1):
-    # setting to train mode
+    # 开始模型训练
     fasterRCNN.train()
     loss_temp = 0
     start = time.time()
@@ -316,7 +303,7 @@ if __name__ == '__main__':
            + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
       loss_temp += loss.item()
 
-      # backward
+      # 梯度反传
       optimizer.zero_grad()
       loss.backward()
       if args.net == "vgg16":
@@ -343,11 +330,12 @@ if __name__ == '__main__':
           fg_cnt = torch.sum(rois_label.data.ne(0))
           bg_cnt = rois_label.data.numel() - fg_cnt
 
-        writer.add_scalar('loss/total_loss', loss.data[0], total_iter)
-        writer.add_scalar('loss/rpn_loss_cls', rpn_loss_cls.mean().data[0], total_iter)
-        writer.add_scalar('loss/rpn_loss_box', rpn_loss_box.mean().data[0], total_iter)
-        writer.add_scalar('loss/RCNN_loss_cls', RCNN_loss_cls.mean().data[0], total_iter)
-        writer.add_scalar('loss/RCNN_loss_bbox', RCNN_loss_bbox.mean().data[0], total_iter)
+        if args.use_tfboard:
+          logger.add_scalar('loss/total_loss', loss.data[0], total_iter)
+          logger.add_scalar('loss/rpn_loss_cls', rpn_loss_cls.mean().data[0], total_iter)
+          logger.add_scalar('loss/rpn_loss_box', rpn_loss_box.mean().data[0], total_iter)
+          logger.add_scalar('loss/RCNN_loss_cls', RCNN_loss_cls.mean().data[0], total_iter)
+          logger.add_scalar('loss/RCNN_loss_bbox', RCNN_loss_bbox.mean().data[0], total_iter)
         total_iter+=1
 
         print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e" \
@@ -355,15 +343,6 @@ if __name__ == '__main__':
         print("\t\t\tfg/bg=(%d/%d), time cost: %f" % (fg_cnt, bg_cnt, end-start))
         print("\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f" \
                       % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box))
-        if args.use_tfboard:
-          info = {
-            'loss': loss_temp,
-            'loss_rpn_cls': loss_rpn_cls,
-            'loss_rpn_box': loss_rpn_box,
-            'loss_rcnn_cls': loss_rcnn_cls,
-            'loss_rcnn_box': loss_rcnn_box
-          }
-          logger.add_scalars("logs_s_{}/losses".format(args.session), info, (epoch - 1) * iters_per_epoch + step)
 
         loss_temp = 0
         start = time.time()

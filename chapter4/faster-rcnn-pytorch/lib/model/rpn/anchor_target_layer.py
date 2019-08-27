@@ -67,6 +67,8 @@ class _AnchorTargetLayer(nn.Module):
         shift_x = np.arange(0, feat_width) * self._feat_stride
         shift_y = np.arange(0, feat_height) * self._feat_stride
         shift_x, shift_y = np.meshgrid(shift_x, shift_y)
+
+        # 利用numpy首先得到原图上的中心点坐标，并利用contiguous保证内存连续
         shifts = torch.from_numpy(np.vstack((shift_x.ravel(), shift_y.ravel(),
                                   shift_x.ravel(), shift_y.ravel())).transpose())
         shifts = shifts.contiguous().type_as(rpn_cls_score).float()
@@ -74,6 +76,7 @@ class _AnchorTargetLayer(nn.Module):
         A = self._num_anchors
         K = shifts.size(0)
 
+        # 调用基础anchor生成所有anchors
         self._anchors = self._anchors.type_as(gt_boxes) # move to specific gpu.
         all_anchors = self._anchors.view(1, A, 4) + shifts.view(K, 1, 4)
         all_anchors = all_anchors.view(K * A, 4)
@@ -85,31 +88,36 @@ class _AnchorTargetLayer(nn.Module):
                 (all_anchors[:, 2] < long(im_info[0][1]) + self._allowed_border) &
                 (all_anchors[:, 3] < long(im_info[0][0]) + self._allowed_border))
 
+        # 保留边框内的anchors
         inds_inside = torch.nonzero(keep).view(-1)
-
-        # keep only inside anchors
         anchors = all_anchors[inds_inside, :]
 
-        # label: 1 is positive, 0 is negative, -1 is dont care
+        # 生成标签向量，对应每一个anchor的状态，1为正，0为负，初始化为-1
         labels = gt_boxes.new(batch_size, inds_inside.size(0)).fill_(-1)
         bbox_inside_weights = gt_boxes.new(batch_size, inds_inside.size(0)).zero_()
         bbox_outside_weights = gt_boxes.new(batch_size, inds_inside.size(0)).zero_()
 
+        # 生成IoU矩阵，每一行代表一个anchor，每一列代表一个标签
         overlaps = bbox_overlaps_batch(anchors, gt_boxes)
 
+        # 对每一行求最大值，返回的第一个为最大值，第二个为最大值的位置
         max_overlaps, argmax_overlaps = torch.max(overlaps, 2)
+        # 对每一列取最大值，返回的是每一个标签对应的IoU最大值
         gt_max_overlaps, _ = torch.max(overlaps, 1)
 
+        # 如果一个anchor最大的IoU小于0.3，视为负样本
         if not cfg.TRAIN.RPN_CLOBBER_POSITIVES:
             labels[max_overlaps < cfg.TRAIN.RPN_NEGATIVE_OVERLAP] = 0
 
+        # 与所有anchors的最大IoU为0的标签要过滤掉
         gt_max_overlaps[gt_max_overlaps==0] = 1e-5
+        # 将与标签有最大IoU的anchor赋予正样本
         keep = torch.sum(overlaps.eq(gt_max_overlaps.view(batch_size,1,-1).expand_as(overlaps)), 2)
 
         if torch.sum(keep) > 0:
             labels[keep>0] = 1
 
-        # fg label: above threshold IOU
+        # 如果一个anchor最大的IoU大于0.7，视为正样本
         labels[max_overlaps >= cfg.TRAIN.RPN_POSITIVE_OVERLAP] = 1
 
         if cfg.TRAIN.RPN_CLOBBER_POSITIVES:
@@ -121,7 +129,7 @@ class _AnchorTargetLayer(nn.Module):
         sum_bg = torch.sum((labels == 0).int(), 1)
 
         for i in range(batch_size):
-            # subsample positive labels if we have too many
+            # 如果正样本数量太多，则进行下采样随机选取
             if sum_fg[i] > num_fg:
                 fg_inds = torch.nonzero(labels[i] == 1).view(-1)
                 # torch.randperm seems has a bug on multi-gpu setting that cause the segfault.
@@ -132,7 +140,7 @@ class _AnchorTargetLayer(nn.Module):
                 disable_inds = fg_inds[rand_num[:fg_inds.size(0)-num_fg]]
                 labels[i][disable_inds] = -1
 
-#           num_bg = cfg.TRAIN.RPN_BATCHSIZE - sum_fg[i]
+            # 负样本同上
             num_bg = cfg.TRAIN.RPN_BATCHSIZE - torch.sum((labels == 1).int(), 1)[i]
 
             # subsample negative labels if we have too many
@@ -147,9 +155,11 @@ class _AnchorTargetLayer(nn.Module):
         offset = torch.arange(0, batch_size)*gt_boxes.size(1)
 
         argmax_overlaps = argmax_overlaps + offset.view(batch_size, 1).type_as(argmax_overlaps)
+       
+        # 选择每一个anchor对应最大IoU的标签进行偏移计算
         bbox_targets = _compute_targets_batch(anchors, gt_boxes.view(-1,5)[argmax_overlaps.view(-1), :].view(batch_size, -1, 5))
 
-        # use a single value instead of 4 values for easy index.
+        # 设置两个权重向量
         bbox_inside_weights[labels==1] = cfg.TRAIN.RPN_BBOX_INSIDE_WEIGHTS[0]
 
         if cfg.TRAIN.RPN_POSITIVE_WEIGHT < 0:

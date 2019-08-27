@@ -73,26 +73,8 @@ Before training, set the right directory to save and load the trained models. Ch
 训练Faster RCNN指令如下：这里默认使用VOC数据集、VGG16的预训练模型，众多超参可根据实际情况修改。
 ```
 CUDA_VISIBLE_DEVICES=0 python trainval_net.py \
-                   --dataset pascal_voc --net vgg16 \
-                   --bs $BATCH_SIZE --nw $WORKER_NUMBER \
-                   --lr $LEARNING_RATE --lr_decay_step $DECAY_STEP \
-                   --cuda
-这里默认使用VOC数据集、VGG16的预训练模型，众多超参可根据实际情况修改，Batch Size以及Worker Number可根据GPU能力合理选择。
 
- CUDA_VISIBLE_DEVICES=$GPU_ID python trainval_net.py \
-                    --dataset pascal_voc --net res101 \
-                    --bs $BATCH_SIZE --nw $WORKER_NUMBER \
-                    --lr $LEARNING_RATE --lr_decay_step $DECAY_STEP \
-                    --cuda
-```
-Above, BATCH_SIZE and WORKER_NUMBER can be set adaptively according to your GPU memory size. **On Titan Xp with 12G memory, it can be up to 4**.
-
-If you have multiple (say 8) Titan Xp GPUs, then just use them all! Try:
-```
-python trainval_net.py --dataset pascal_voc --net vgg16 \
-                       --bs 24 --nw 8 \
-                       --lr $LEARNING_RATE --lr_decay_step $DECAY_STEP \
-                       --cuda --mGPUs
+这里使用了train_net.py中的默认参数，众多超参可根据实际情况修改。Batch Size以及Worker Number可根据GPU能力合理选择。
 
 ```
 ## 前向测试

@@ -119,6 +119,7 @@ class _ProposalTargetLayer(nn.Module):
         """
         # overlaps: (rois x gt_boxes)
 
+        # 利用Proposal与标签生成IoU矩阵
         overlaps = bbox_overlaps_batch(all_rois, gt_boxes)
 
         max_overlaps, gt_assignment = torch.max(overlaps, 2)
@@ -130,13 +131,14 @@ class _ProposalTargetLayer(nn.Module):
         offset = torch.arange(0, batch_size)*gt_boxes.size(1)
         offset = offset.view(-1, 1).type_as(gt_assignment) + gt_assignment
 
-        labels = gt_boxes[:,:,4].contiguous().view(-1).index((offset.view(-1),)).view(batch_size, -1)
-        
+        #labels = gt_boxes[:,:,4].contiguous().view(-1).index((offset.view(-1),)).view(batch_size, -1)
+        labels = gt_boxes[:,:,4].contiguous().view(-1)[(offset.view(-1),)].view(batch_size, -1)        
+
         labels_batch = labels.new(batch_size, rois_per_image).zero_()
         rois_batch  = all_rois.new(batch_size, rois_per_image, 5).zero_()
         gt_rois_batch = all_rois.new(batch_size, rois_per_image, 5).zero_()
-        # Guard against the case when an image has fewer than max_fg_rois_per_image
-        # foreground RoIs
+
+        # 选择满足条件的正负样本
         for i in range(batch_size):
 
             fg_inds = torch.nonzero(max_overlaps[i] >= cfg.TRAIN.FG_THRESH).view(-1)
@@ -147,6 +149,7 @@ class _ProposalTargetLayer(nn.Module):
                                     (max_overlaps[i] >= cfg.TRAIN.BG_THRESH_LO)).view(-1)
             bg_num_rois = bg_inds.numel()
 
+            # 如果正样本超过64个，负样本超过(256-正样本)的数量，则进行下采样随机选取
             if fg_num_rois > 0 and bg_num_rois > 0:
                 # sampling fg
                 fg_rois_per_this_image = min(fg_rois_per_image, fg_num_rois)
@@ -203,6 +206,7 @@ class _ProposalTargetLayer(nn.Module):
 
             gt_rois_batch[i] = gt_boxes[i][gt_assignment[i][keep_inds]]
 
+        # 计算每一个Proposal相对于其标签的偏移量，并记录权重
         bbox_target_data = self._compute_targets_pytorch(
                 rois_batch[:,:,1:5], gt_rois_batch[:,:,:4])
 

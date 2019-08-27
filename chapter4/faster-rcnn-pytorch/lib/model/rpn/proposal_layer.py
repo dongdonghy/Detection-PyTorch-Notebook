@@ -102,10 +102,10 @@ class _ProposalLayer(nn.Module):
         scores = scores.permute(0, 2, 3, 1).contiguous()
         scores = scores.view(batch_size, -1)
 
-        # Convert anchors into proposals via bbox transformations
+        # 生成anchor后，首先利用回归网络对anchor进行偏移修整
         proposals = bbox_transform_inv(anchors, bbox_deltas, batch_size)
 
-        # 2. clip predicted boxes to image
+        # 将超出图像范围的边框修整到图像边界
         proposals = clip_boxes(proposals, im_info, batch_size)
         # proposals = clip_boxes_batch(proposals, im_info, batch_size)
 
@@ -119,7 +119,8 @@ class _ProposalLayer(nn.Module):
         # proposals_keep = proposals.view(-1, 4)[keep_idx, :].contiguous().view(batch_size, trim_size, 4)
         
         # _, order = torch.sort(scores_keep, 1, True)
-        
+
+        # 利用分类网络的得分对proposal进行排序        
         scores_keep = scores
         proposals_keep = proposals
         _, order = torch.sort(scores_keep, 1, True)
@@ -135,6 +136,7 @@ class _ProposalLayer(nn.Module):
             # # 5. take top pre_nms_topN (e.g. 6000)
             order_single = order[i]
 
+            # 选取前12000个
             if pre_nms_topN > 0 and pre_nms_topN < scores_keep.numel():
                 order_single = order_single[:pre_nms_topN]
 
@@ -145,9 +147,11 @@ class _ProposalLayer(nn.Module):
             # 7. take after_nms_topN (e.g. 300)
             # 8. return the top proposals (-> RoIs top)
 
+            # 进行NMS，在此利用GPU进行计算，提高效率
             keep_idx_i = nms(torch.cat((proposals_single, scores_single), 1), nms_thresh, force_cpu=not cfg.USE_GPU_NMS)
             keep_idx_i = keep_idx_i.long().view(-1)
 
+            # 最终选择前2000个，作为最终的Proposal输出
             if post_nms_topN > 0:
                 keep_idx_i = keep_idx_i[:post_nms_topN]
             proposals_single = proposals_single[keep_idx_i, :]

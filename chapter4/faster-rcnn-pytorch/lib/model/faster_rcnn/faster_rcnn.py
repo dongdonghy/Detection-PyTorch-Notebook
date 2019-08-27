@@ -37,16 +37,17 @@ class _fasterRCNN(nn.Module):
         self.RCNN_roi_crop = _RoICrop()
 
     def forward(self, im_data, im_info, gt_boxes, num_boxes):
+        # 输入数据的第一维是batch数
         batch_size = im_data.size(0)
 
         im_info = im_info.data
         gt_boxes = gt_boxes.data
         num_boxes = num_boxes.data
 
-        # feed image data to base model to obtain base feature map
+        # 从VGG的Backbone中获取feature map
         base_feat = self.RCNN_base(im_data)
 
-        # feed base feature map tp RPN to obtain rois
+        # 将feature map送入RPN，得到Proposal与分类与回归loss
         rois, rpn_loss_cls, rpn_loss_bbox = self.RCNN_rpn(base_feat, im_info, gt_boxes, num_boxes)
 
         # if it is training phrase, then use ground trubut bboxes for refining
@@ -82,10 +83,10 @@ class _fasterRCNN(nn.Module):
         elif cfg.POOLING_MODE == 'pool':
             pooled_feat = self.RCNN_roi_pool(base_feat, rois.view(-1,5))
 
-        # feed pooled features to top model
+        # 利用VGG的两层分类全连接网络进一步计算
         pooled_feat = self._head_to_tail(pooled_feat)
 
-        # compute bbox offset
+        # 分别计算分类与回归预测值
         bbox_pred = self.RCNN_bbox_pred(pooled_feat)
         if self.training and not self.class_agnostic:
             # select the corresponding columns according to roi labels
@@ -93,7 +94,6 @@ class _fasterRCNN(nn.Module):
             bbox_pred_select = torch.gather(bbox_pred_view, 1, rois_label.view(rois_label.size(0), 1, 1).expand(rois_label.size(0), 1, 4))
             bbox_pred = bbox_pred_select.squeeze(1)
 
-        # compute object classification probability
         cls_score = self.RCNN_cls_score(pooled_feat)
         cls_prob = F.softmax(cls_score, 1)
 
@@ -101,10 +101,10 @@ class _fasterRCNN(nn.Module):
         RCNN_loss_bbox = 0
 
         if self.training:
-            # classification loss
+            # 对256个RoI进行分类损失求解，在此使用交叉熵损失
             RCNN_loss_cls = F.cross_entropy(cls_score, rois_label)
 
-            # bounding box regression L1 loss
+            # 利用smoothl1损失函数进行回归loss计算
             RCNN_loss_bbox = _smooth_l1_loss(bbox_pred, rois_target, rois_inside_ws, rois_outside_ws)
 
 

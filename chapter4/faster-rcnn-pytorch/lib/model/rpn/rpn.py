@@ -2,7 +2,6 @@ from __future__ import absolute_import
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
 
 from model.utils.config import cfg
 from .proposal_layer import _ProposalLayer
@@ -56,19 +55,21 @@ class _RPN(nn.Module):
         return x
 
     def forward(self, base_feat, im_info, gt_boxes, num_boxes):
-
+ 
+        # 输入数据的第一维是batch数
         batch_size = base_feat.size(0)
 
-        # return feature map after convrelu layer
+        # 首先利用3×3卷积进一步融合特征
         rpn_conv1 = F.relu(self.RPN_Conv(base_feat), inplace=True)
-        # get rpn classification score
+        # 利用1×1卷积得到分类网络，每个点代表anchor的前景背景得分
         rpn_cls_score = self.RPN_cls_score(rpn_conv1)
 
+        # 利用reshape与softmax得到anchor的前景背景概率
         rpn_cls_score_reshape = self.reshape(rpn_cls_score, 2)
         rpn_cls_prob_reshape = F.softmax(rpn_cls_score_reshape, 1)
         rpn_cls_prob = self.reshape(rpn_cls_prob_reshape, self.nc_score_out)
 
-        # get rpn offsets to the anchor boxes
+        # 利用1×1卷积得到回归网络，每一个点代表anchor的偏移
         rpn_bbox_pred = self.RPN_bbox_pred(rpn_conv1)
 
         # proposal layer
@@ -90,20 +91,20 @@ class _RPN(nn.Module):
             rpn_cls_score = rpn_cls_score_reshape.permute(0, 2, 3, 1).contiguous().view(batch_size, -1, 2)
             rpn_label = rpn_data[0].view(batch_size, -1)
 
-            rpn_keep = Variable(rpn_label.view(-1).ne(-1).nonzero().view(-1))
+            rpn_keep = rpn_label.view(-1).ne(-1).nonzero().view(-1)
             rpn_cls_score = torch.index_select(rpn_cls_score.view(-1,2), 0, rpn_keep)
             rpn_label = torch.index_select(rpn_label.view(-1), 0, rpn_keep.data)
-            rpn_label = Variable(rpn_label.long())
+            rpn_label = rpn_label.long()
+            # 先对scores进行筛选得到256个样本的得分，随后进行交叉熵求解
             self.rpn_loss_cls = F.cross_entropy(rpn_cls_score, rpn_label)
             fg_cnt = torch.sum(rpn_label.data.ne(0))
 
             rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights = rpn_data[1:]
 
-            # compute bbox regression loss
-            rpn_bbox_inside_weights = Variable(rpn_bbox_inside_weights)
-            rpn_bbox_outside_weights = Variable(rpn_bbox_outside_weights)
-            rpn_bbox_targets = Variable(rpn_bbox_targets)
-
+            # 利用smoothl1损失函数进行loss计算
+            #rpn_bbox_inside_weights = Variable(rpn_bbox_inside_weights)
+            #rpn_bbox_outside_weights = Variable(rpn_bbox_outside_weights)
+            #rpn_bbox_targets = Variable(rpn_bbox_targets)
             self.rpn_loss_box = _smooth_l1_loss(rpn_bbox_pred, rpn_bbox_targets, rpn_bbox_inside_weights,
                                                             rpn_bbox_outside_weights, sigma=3, dim=[1,2,3])
 
