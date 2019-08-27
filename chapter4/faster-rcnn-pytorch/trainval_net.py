@@ -17,7 +17,6 @@ import pdb
 import time
 
 import torch
-from torch.autograd import Variable
 import torch.nn as nn
 import torch.optim as optim
 
@@ -189,12 +188,11 @@ if __name__ == '__main__':
   pprint.pprint(cfg)
   np.random.seed(cfg.RNG_SEED)
 
-  #torch.backends.cudnn.benchmark = True
+  # 当有GPU资源时，最好在训练时加上--cuda参数
   if torch.cuda.is_available() and not args.cuda:
     print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
-  # train set
-  # -- Note: Use validation set and disable the flipped to enable faster loading.
+  # 加载数据集
   cfg.TRAIN.USE_FLIPPED = True
   cfg.USE_GPU_NMS = args.cuda
   imdb, roidb, ratio_list, ratio_index = combined_roidb(args.imdb_name)
@@ -214,29 +212,22 @@ if __name__ == '__main__':
   dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size,
                             sampler=sampler_batch, num_workers=args.num_workers)
 
-  # initilize the tensor holder here.
+  # 初始化数据集信息.
   im_data = torch.FloatTensor(1)
   im_info = torch.FloatTensor(1)
   num_boxes = torch.LongTensor(1)
   gt_boxes = torch.FloatTensor(1)
 
-  # ship to cuda
   if args.cuda:
     im_data = im_data.cuda()
     im_info = im_info.cuda()
     num_boxes = num_boxes.cuda()
     gt_boxes = gt_boxes.cuda()
 
-  # make variable
-  im_data = Variable(im_data)
-  im_info = Variable(im_info)
-  num_boxes = Variable(num_boxes)
-  gt_boxes = Variable(gt_boxes)
-
   if args.cuda:
     cfg.CUDA = True
 
-  # initilize the network here.
+  # 初始化网络结构.
   if args.net == 'vgg16':
     fasterRCNN = vgg16(imdb.classes, pretrained=True, class_agnostic=args.class_agnostic)
   elif args.net == 'res101':
@@ -253,8 +244,6 @@ if __name__ == '__main__':
 
   lr = cfg.TRAIN.LEARNING_RATE
   lr = args.lr
-  #tr_momentum = cfg.TRAIN.MOMENTUM
-  #tr_momentum = args.momentum
 
   params = []
   total_iter=0
