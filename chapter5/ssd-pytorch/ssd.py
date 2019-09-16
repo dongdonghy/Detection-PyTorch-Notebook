@@ -67,29 +67,30 @@ class SSD(nn.Module):
                     2: localization layers, Shape: [batch,num_priors*4]
                     3: priorbox layers, Shape: [2,num_priors*4]
         """
+        # sources保存特征图，loc与conf保存所有PriorBox的位置与类别预测特征
         sources = list()
         loc = list()
         conf = list()
 
-        # apply vgg up to conv4_3 relu
+        # 对输入图像卷积到conv4_3，将特征添加到sources中
         for k in range(23):
             x = self.vgg[k](x)
 
         s = self.L2Norm(x)
         sources.append(s)
 
-        # apply vgg up to fc7
+        # 继续卷积到conv7，将特征添加到sources中
         for k in range(23, len(self.vgg)):
             x = self.vgg[k](x)
         sources.append(x)
 
-        # apply extra layers and cache source layer outputs
+        # 继续利用额外的卷积层计算，并将特征添加到sources中
         for k, v in enumerate(self.extras):
             x = F.relu(v(x), inplace=True)
             if k % 2 == 1:
                 sources.append(x)
 
-        # apply multibox head to source layers
+        # 对sources中的特征图利用类别与位置网络进行卷积计算，并保存到loc与conf中
         for (x, l, c) in zip(sources, self.loc, self.conf):
             loc.append(l(x).permute(0, 2, 3, 1).contiguous())
             conf.append(c(x).permute(0, 2, 3, 1).contiguous())
@@ -104,6 +105,7 @@ class SSD(nn.Module):
                 self.priors.type(type(x.data))                  # default boxes
             )
         else:
+            # 对于训练来说，output包括了loc与conf的预测值以及PriorBox的信息
             output = (
                 loc.view(loc.size(0), -1, 4),
                 conf.view(conf.size(0), -1, self.num_classes),
@@ -124,6 +126,7 @@ class SSD(nn.Module):
 
 # This function is derived from torchvision VGG make_layers()
 # https://github.com/pytorch/vision/blob/master/torchvision/models/vgg.py
+# 搭建vgg基础网络的函数
 def vgg(cfg, i, batch_norm=False):
     layers = []
     in_channels = i
@@ -146,7 +149,7 @@ def vgg(cfg, i, batch_norm=False):
                nn.ReLU(inplace=True), conv7, nn.ReLU(inplace=True)]
     return layers
 
-
+# 额外的深度卷积层构造函数
 def add_extras(cfg, i, batch_norm=False):
     # Extra layers added to VGG for feature scaling
     layers = []
@@ -180,9 +183,12 @@ def multibox(vgg, extra_layers, cfg, num_classes):
                                   * num_classes, kernel_size=3, padding=1)]
     return vgg, extra_layers, (loc_layers, conf_layers)
 
+# 这里的base为VGG-16前13个卷积层构造，M代表maxpooling，C代表ceil_mode为True
 base = [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'C', 512, 512, 512, 'M',
             512, 512, 512]
+# 额外部分的卷积通道数，S代表了步长为2，其余卷积层默认步长为1
 extras = [256, 'S', 512, 128, 'S', 256, 128, 256, 128, 256]
+# 每个特征图上一个点对应的PriorBox数量
 mbox = [4, 6, 6, 6, 4, 4]  # number of boxes per feature map location
 
 def build_ssd(phase, size=300, num_classes=21):
@@ -190,6 +196,7 @@ def build_ssd(phase, size=300, num_classes=21):
         print("ERROR: Phase: " + phase + " not recognized")
         return
 
+    # 利用上面的vgg_base与conv_extras网络，生成类别与位置预测网络head_
     base_, extras_, head_ = multibox(vgg(base, 3),
                                      add_extras(extras, 1024),
                                      mbox, num_classes)

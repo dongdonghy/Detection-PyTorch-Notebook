@@ -25,26 +25,26 @@ class PriorBox(object):
             if v <= 0:
                 raise ValueError('Variances must be greater than 0')
 
+    # 生成所有的PriorBox，需要每一个特征图的信息
     def forward(self):
         mean = []
         for k, f in enumerate(self.feature_maps):
             for i, j in product(range(f), repeat=2):
+                # f_k为每个特征图的尺寸
                 f_k = self.image_size / self.steps[k]
-                # unit center x,y
+                # 求取每个box的中心坐标
                 cx = (j + 0.5) / f_k
                 cy = (i + 0.5) / f_k
 
-                # aspect_ratio: 1
-                # rel size: min_size
+                # 对应{S_k, S_k}大小的PriorBox
                 s_k = self.min_sizes[k]/self.image_size
                 mean += [cx, cy, s_k, s_k]
 
-                # aspect_ratio: 1
-                # rel size: sqrt(s_k * s_(k+1))
+                # 对应{√(S_k S_(k+1) ), √(S_k S_(k+1) )}大小的PriorBox
                 s_k_prime = sqrt(s_k * (self.max_sizes[k]/self.image_size))
                 mean += [cx, cy, s_k_prime, s_k_prime]
 
-                # rest of aspect ratios
+                # 剩余的比例为2、1/2、3、1/3的PriorBox
                 for ar in self.aspect_ratios[k]:
                     mean += [cx, cy, s_k*sqrt(ar), s_k/sqrt(ar)]
                     mean += [cx, cy, s_k/sqrt(ar), s_k*sqrt(ar)]

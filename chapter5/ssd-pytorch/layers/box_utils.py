@@ -67,7 +67,8 @@ def jaccard(box_a, box_b):
     union = area_a + area_b - inter
     return inter / union  # [A,B]
 
-
+# 输入包括IoU阈值、真实边框位置、预选框、方差、真实边框类别
+# 输出为每一个预选框的类别，保存在conf_t中，对应的真实边框位置，保存在loc_t中
 def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
     """Match each prior box with the ground truth box of the highest jaccard
     overlap, encode the bounding boxes, then return the matched indices
@@ -85,9 +86,9 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
     Return:
         The matched indices corresponding to 1)location and 2)confidence preds.
     """
-    # 这里truth是max min形式的,而prior是centor形式
 
-    # jaccard index
+    # 注意这里truth是最大最小值形式的,而prior是中心点与长宽形式
+    # 求取真实框与预选框的IoU
     overlaps = jaccard(
         truths,
         point_form(priors)
@@ -96,7 +97,7 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
     # (Bipartite Matching)
     # [1,num_objects] best prior for each ground truth
     best_prior_overlap, best_prior_idx = overlaps.max(1, keepdim=True)
-    # [1,num_priors] best ground truth for each prior
+    # 将每一个真实框对应的最佳PriorBox的IoU设置为2
     best_truth_overlap, best_truth_idx = overlaps.max(0, keepdim=True)
     best_truth_idx.squeeze_(0)
     best_truth_overlap.squeeze_(0)
@@ -114,16 +115,16 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
         best_truth_idx[best_prior_idx[j]] = j
 
 
-    # 每一个prior对应的truth
+    # 每一个prior对应的真实框的位置
     matches = truths[best_truth_idx]          # Shape: [num_priors,4]
 
     # 每一个prior对应的类别
     conf = labels[best_truth_idx] + 1         # Shape: [num_priors]
 
-    # 把小于0.5的设置为0
+    # 如果一个PriorBox对应的最大IoU小于0.5，则视为负样本
     conf[best_truth_overlap < threshold] = 0  # label as background
 
-
+    # 进一步计算定位的偏移真值
     loc = encode(matches, priors, variances)
     loc_t[idx] = loc    # [num_priors,4] encoded offsets to learn
     conf_t[idx] = conf  # [num_priors] top class label for each prior

@@ -71,6 +71,7 @@ if not os.path.exists(args.save_folder):
 def train():
 
     cfg = voc
+    # 利用VOCDetection重写了Dataset类，并传入了所需的数据变换transform
     dataset = VOCDetection(root=args.dataset_root,
                                transform=SSDAugmentation(cfg['min_dim'],
                                                          MEANS))
@@ -129,6 +130,7 @@ def train():
         iter_plot = create_vis_plot('Iteration', 'Loss', vis_title, vis_legend)
         epoch_plot = create_vis_plot('Epoch', 'Loss', vis_title, vis_legend)
 
+    # 利用DataLoader实现了批量处理、打乱、多线程加载等功能
     data_loader = data.DataLoader(dataset, args.batch_size,
                                   num_workers=args.num_workers,
                                   shuffle=True, collate_fn=detection_collate,

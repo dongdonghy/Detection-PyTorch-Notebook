@@ -146,6 +146,7 @@ class RandomLightingNoise(object):
 
     def __call__(self, image, boxes=None, labels=None):
         if random.randint(2):
+            # 随机选取一个通道的交换顺序，交换图像三个通道的值
             swap = self.perms[random.randint(len(self.perms))]
             shuffle = SwapChannels(swap)  # shuffle channels
             image = shuffle(image)
@@ -190,6 +191,7 @@ class RandomBrightness(object):
 
     def __call__(self, image, boxes=None, labels=None):
         if random.randint(2):
+            # 随机选取一个位于[-32, 32)区间的数，相加到图像上
             delta = random.uniform(-self.delta, self.delta)
             image += delta
         return image, boxes, labels
@@ -316,12 +318,13 @@ class Expand(object):
     def __call__(self, image, boxes, labels):
         if random.randint(2):
             return image, boxes, labels
-
+        # 求取原图像在新图像中的左上角坐标值
         height, width, depth = image.shape
         ratio = random.uniform(1, 4)
         left = random.uniform(0, width*ratio - width)
         top = random.uniform(0, height*ratio - height)
 
+        # 建立新的图像，并依次赋值
         expand_image = np.zeros(
             (int(height*ratio), int(width*ratio), depth),
             dtype=image.dtype)
@@ -330,6 +333,7 @@ class Expand(object):
                      int(left):int(left + width)] = image
         image = expand_image
 
+        # 对边框也进行相应变换
         boxes = boxes.copy()
         boxes[:, :2] += (int(left), int(top))
         boxes[:, 2:] += (int(left), int(top))
@@ -341,6 +345,7 @@ class RandomMirror(object):
     def __call__(self, image, boxes, classes):
         _, width, _ = image.shape
         if random.randint(2):
+            # 这里的::代表反向，即将每一行的数据反向遍历，完成镜像
             image = image[:, ::-1]
             boxes = boxes.copy()
             boxes[:, 0::2] = width - boxes[:, 2::-2]
@@ -402,15 +407,18 @@ class SSDAugmentation(object):
         self.mean = mean
         self.size = size
         self.augment = Compose([
+            # 首先将图像像素值从整型变成浮点型
             ConvertFromInts(),
+            # 将标签中的边框从比例坐标变换为真实坐标
             ToAbsoluteCoords(),
+            # 因此进行亮度、对比度、色相与饱和度的随机调整，然后随机调换通道
             PhotometricDistort(),
-            Expand(self.mean),
-            RandomSampleCrop(),
-            RandomMirror(),
-            ToPercentCoords(),
-            Resize(self.size),
-            SubtractMeans(self.mean)
+            Expand(self.mean), # 随机扩展图像大小，图像仅靠右下方
+            RandomSampleCrop(), # 随机裁剪图像
+            RandomMirror(), # 随机左右镜像
+            ToPercentCoords(), # 从真实坐标变回比例坐标
+            Resize(self.size), # 缩放到固定的300*300大小
+            SubtractMeans(self.mean) # 最后进行均值化
         ])
 
     def __call__(self, img, boxes, labels):
