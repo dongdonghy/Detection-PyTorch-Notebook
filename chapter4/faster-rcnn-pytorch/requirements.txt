@@ -7,3 +7,4 @@ easydict
 matplotlib
 pyyaml
 tensorboardX
+imageio

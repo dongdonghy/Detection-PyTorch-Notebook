@@ -8,7 +8,7 @@
 
 首先clone本书代码到本地：
 ```
-git clone git@github.com:dongdonghy/Detection-PyTorch-Notebook.git
+git clone https://github.com/dongdonghy/Detection-PyTorch-Notebook.git
 ```
 
 然后切换到本代码：
@@ -64,11 +64,7 @@ cd lib
 sh make.sh
 ```
 
-**As pointed out in this [issue](https://github.com/jwyang/faster-rcnn.pytorch/issues/16), if you encounter some error during the compilation, you might miss to export the CUDA paths to your environment.**
-
 ## 训练
-
-Before training, set the right directory to save and load the trained models. Change the arguments "save_dir" and "load_dir" in trainval_net.py and test_net.py to adapt to your environment.
 
 训练Faster RCNN指令如下：这里默认使用VOC数据集、VGG16的预训练模型，众多超参可根据实际情况修改。
 ```
@@ -85,25 +81,6 @@ python test_net.py --dataset pascal_voc --net vgg16 \
                    --checksession $SESSION --checkepoch $EPOCH --checkpoint $CHECKPOINT \
                    --cuda
 ```
-Specify the specific model session, chechepoch and checkpoint, e.g., SESSION=1, EPOCH=6, CHECKPOINT=416.
-
-## 演示
-
-If you want to run detection on your own images with a pre-trained model, download the pretrained model listed in above tables or train your own models at first, then add images to folder $ROOT/images, and then run
-```
-python demo.py --net vgg16 \
-               --checksession $SESSION --checkepoch $EPOCH --checkpoint $CHECKPOINT \
-               --cuda --load_dir path/to/model/directoy
-```
-
-Then you will find the detection results in folder $ROOT/images.
-
-**Note the default demo.py merely support pascal_voc categories. You need to change the [line](https://github.com/jwyang/faster-rcnn.pytorch/blob/530f3fdccaa60d05fa068bc2148695211586bd88/demo.py#L156) to adapt your own model.**
-
-Below are some detection results:
-
-<div style="color:#0000FF" align="center">
-<img src="images/img3_det_res101.jpg" width="430"/> <img src="images/img4_det_res101.jpg" width="430"/>
-</div>
+SESSION、EPOCH、CHECKPOINT修改为自己想要前向测试的模型
 
 
