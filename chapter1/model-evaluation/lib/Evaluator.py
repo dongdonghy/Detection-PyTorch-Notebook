@@ -24,7 +24,7 @@ class Evaluator:
             dects = det_boxes[c]
             gt_class = gt_boxes[c]
             npos = num_pos[c]
-            dects = sorted(dects, key=lambda conf: conf[5], reverse=True)
+            dects = sorted(dects, key=lambda conf: conf[4], reverse=True)
             TP = np.zeros(len(dects))
             FP = np.zeros(len(dects))
                 
