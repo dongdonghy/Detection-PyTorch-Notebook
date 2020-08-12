@@ -15,7 +15,7 @@ import torch.utils.data as data
 import numpy as np
 import argparse
 
-
+viz = None
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
 
@@ -78,6 +78,7 @@ def train():
 
     if args.visdom:
         import visdom
+        global viz
         viz = visdom.Visdom()
 
     ssd_net = build_ssd('train', cfg['min_dim'], cfg['num_classes'])
@@ -139,7 +140,7 @@ def train():
     batch_iterator = iter(data_loader)
     for iteration in range(args.start_iter, cfg['max_iter']):
         if args.visdom and iteration != 0 and (iteration % epoch_size == 0):
-            update_vis_plot(epoch, loc_loss, conf_loss, epoch_plot, None,
+            update_vis_plot(epoch, loc_loss, conf_loss, iter_plot, epoch_plot,
                             'append', epoch_size)
             # reset epoch loss counters
             loc_loss = 0
@@ -175,15 +176,15 @@ def train():
         loss.backward()
         optimizer.step()
         t1 = time.time()
-        loc_loss += loss_l.data[0]
-        conf_loss += loss_c.data[0]
+        loc_loss += loss_l.item()
+        conf_loss += loss_c.item()
 
         if iteration % 10 == 0:
             print('timer: %.4f sec.' % (t1 - t0))
-            print('iter ' + repr(iteration) + ' || Loss: %.4f ||' % (loss.data[0]), end=' ')
+            print('iter ' + repr(iteration) + ' || Loss: %.4f ||' % (loss.item()), end=' ')
 
         if args.visdom:
-            update_vis_plot(iteration, loss_l.data[0], loss_c.data[0],
+            update_vis_plot(iteration, loss_l.item(), loss_c.item(),
                             iter_plot, epoch_plot, 'append')
 
         if iteration != 0 and iteration % 5000 == 0:
@@ -216,6 +217,7 @@ def weights_init(m):
 
 
 def create_vis_plot(_xlabel, _ylabel, _title, _legend):
+    global viz
     return viz.line(
         X=torch.zeros((1,)).cpu(),
         Y=torch.zeros((1, 3)).cpu(),
@@ -230,6 +232,7 @@ def create_vis_plot(_xlabel, _ylabel, _title, _legend):
 
 def update_vis_plot(iteration, loc, conf, window1, window2, update_type,
                     epoch_size=1):
+    global viz
     viz.line(
         X=torch.ones((1, 3)).cpu() * iteration,
         Y=torch.Tensor([loc, conf, loc + conf]).unsqueeze(0).cpu() / epoch_size,

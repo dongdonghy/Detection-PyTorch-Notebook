@@ -1,7 +1,10 @@
-import torch
-import visdom
+#!/usr/bin/env python3
+# coding: utf-8
 
-vis = visdom.Visdom(env='first')
+import torch
+from visdom import Visdom
+
+vis = Visdom(env='first')
 vis.text('first visdom', win='text1')
 vis.text('hello PyTorch', win='text1', append=True)
 
