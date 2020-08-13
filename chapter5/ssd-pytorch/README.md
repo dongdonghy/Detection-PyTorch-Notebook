@@ -8,7 +8,7 @@
 代码提供了COCO与PASCAL VOC两种数据集的使用方法，在此以VOC2012为例，利用下面脚本可以自动完成下载，当然也可以手动把数据集放到对应文件夹。
 ```Shell
 # 默认数据路径为data/VOCdevkit
-sh data/scripts/VOC2012.sh 
+sh data/scripts/VOC2012.sh
 ```
 
 ## 训练
