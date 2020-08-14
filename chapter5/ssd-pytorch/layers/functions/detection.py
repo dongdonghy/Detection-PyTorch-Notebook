@@ -2,6 +2,7 @@ import torch
 from torch.autograd import Function
 from ..box_utils import decode, nms
 from data import voc as cfg
+import torchvision
 
 
 class Detect(Function):
@@ -50,8 +51,11 @@ class Detect(Function):
                     continue
                 l_mask = c_mask.unsqueeze(1).expand_as(decoded_boxes)
                 boxes = decoded_boxes[l_mask].view(-1, 4)
-                # idx of highest scoring and non-overlapping boxes per class
-                ids, count = nms(boxes, scores, self.nms_thresh, self.top_k)
+                # ids, count = nms(boxes, scores, self.nms_thresh, self.top_k)
+                # using torchvision.ops.nms() replace original nms
+                ids = torchvision.ops.nms(boxes, scores, self.nms_thresh)
+                count = min(ids.size(0), self.top_k)
+
                 output[i, cl, :count] = \
                     torch.cat((scores[ids[:count]].unsqueeze(1),
                                boxes[ids[:count]]), 1)

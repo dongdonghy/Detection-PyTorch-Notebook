@@ -385,6 +385,7 @@ def test_net(save_folder, net, cuda, dataset, transform, top_k,
         # detections = net(x).data
         detections = net(x)
         detect_time = _t['im_detect'].toc(average=False)
+        # print("detections.shape: ", detections.shape)
 
         # skip j = 0, because it's the background class
         for j in range(1, detections.size(1)):
